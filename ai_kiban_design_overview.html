@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>個人AI運用基盤 設計の全体像</title>
+<style>
+:root{
+  --ink:#191c1f;--ink2:#5b6169;--line:#dde2e8;--bg:#fff;--bg2:#f6f8fa;
+  --accent:#1f4e79;--accent-bg:#eef3f8;--accent-line:#cfdcea;
+  --pos:#186a45;--neg:#a32b1f;--warn:#8a6100;
+  --w:1080px;--r:6px;--fs:15px
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:var(--fs);line-height:1.75;
+  font-family:"Yu Gothic","YuGothic","Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  font-feature-settings:"palt" 1}
+.wrap{max-width:var(--w);margin:0 auto;padding:40px 24px 80px}
+p{margin:0 0 12px}
+a{color:var(--accent)}
+code,.mono{font-family:"SFMono-Regular",Consolas,"Courier New",monospace;font-size:.92em}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+.hd{border-bottom:2px solid var(--accent);padding-bottom:16px;margin:0 0 32px}
+.hd h1{font-size:26px;line-height:1.4;margin:0 0 10px;font-weight:700}
+.hd .lede{margin:0 0 10px;color:var(--ink2)}
+.meta{font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+
+/* conclusion summary */
+.summary{background:var(--accent-bg);border:1px solid var(--accent-line);border-radius:var(--r);padding:20px 22px;margin:0 0 36px}
+.summary h2{margin:0 0 10px;font-size:13px;letter-spacing:.08em;color:var(--accent);font-weight:700;border:0;padding:0}
+.summary .lead{margin:0 0 14px;font-size:17px;font-weight:700;line-height:1.6}
+.summary ul{margin:0;padding-left:1.2em}
+.summary li{margin:4px 0}
+.ask{margin:14px 0 0;padding-top:12px;border-top:1px dashed var(--accent-line);font-size:14px}
+.ask b{color:var(--accent)}
+
+/* sections */
+section{margin:0 0 40px}
+h2{font-size:19px;margin:0 0 14px;padding-left:11px;border-left:4px solid var(--accent);line-height:1.5}
+h3{font-size:15.5px;margin:24px 0 8px;color:var(--accent)}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin:0 0 20px}
+.kpi{border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.k-label{font-size:12.5px;color:var(--ink2);margin:0 0 6px}
+.k-val{font-size:27px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
+.k-val .unit{font-size:14px;font-weight:500;margin-left:2px}
+.k-cmp{font-size:12.5px;margin:5px 0 0;font-variant-numeric:tabular-nums}
+.k-mean{font-size:12.5px;color:var(--ink2);margin:7px 0 0;padding-top:7px;border-top:1px solid var(--line);line-height:1.6}
+.up{color:var(--pos)}.down{color:var(--neg)}.flat{color:var(--ink2)}
+
+/* table */
+.tw{overflow-x:auto;margin:0 0 16px}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:480px}
+caption{text-align:left;font-size:12.5px;color:var(--ink2);padding:0 0 6px}
+th,td{border-bottom:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+thead th{background:var(--bg2);border-bottom:2px solid var(--line);font-size:13px;white-space:nowrap}
+tbody th{font-weight:700;white-space:nowrap}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+
+/* status badge - symbol required in text, never colour alone */
+.badge{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap;line-height:1.6}
+.badge.ok{color:var(--pos)}.badge.ng{color:var(--neg)}.badge.wa{color:var(--warn)}.badge.na{color:var(--ink2)}
+
+/* figure */
+figure{margin:0 0 20px}
+.frame{border:1px solid var(--line);border-radius:var(--r);background:var(--bg2);padding:20px;text-align:center}
+.frame svg,.frame canvas,.frame img{max-width:100%;height:auto}
+figcaption{font-size:12.5px;color:var(--ink2);margin:7px 0 0}
+.take{margin:7px 0 0;font-size:13px;border-left:3px solid var(--accent);padding-left:9px}
+
+/* assumptions & sources */
+.note{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;font-size:13px;color:var(--ink2)}
+.note h2{font-size:13px;border:0;padding:0;margin:0 0 8px;color:var(--ink)}
+.note ul{margin:0;padding-left:1.2em}
+.note li{margin:3px 0}
+.est{border-bottom:1px dotted var(--ink2)}
+
+/* controls */
+.ctl{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.ctl input,.ctl select,.ctl button{font:inherit;font-size:14px;padding:7px 11px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);color:var(--ink)}
+.ctl button{cursor:pointer}
+.ctl button[aria-pressed=true]{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+@media (max-width:640px){
+  .wrap{padding:24px 16px 56px}
+  .hd h1{font-size:21px}
+  .summary{padding:16px}
+  .summary .lead{font-size:15.5px}
+  .k-val{font-size:23px}
+}
+
+@media print{
+  :root{--fs:10.5pt}
+  @page{size:A4;margin:14mm}
+  .wrap{max-width:none;padding:0}
+  .ctl,.no-print{display:none!important}
+  details>summary~*{display:revert!important}
+  [role=tabpanel][hidden]{display:block!important}
+  section,figure,table,.kpi,.summary{break-inside:avoid}
+  h2{break-after:avoid}
+  thead{display:table-header-group}
+  a{color:var(--ink);text-decoration:none}
+  .summary,.note,.frame{background:#fff}
+}
+</style></head><body>
+<div class="wrap">
+
+<header class="hd">
+  <h1>個人AI運用基盤　設計の全体像</h1>
+  <p class="lede">ChatGPT・Claude・Notion AI をまたいで、仕事の文脈・判断・学びを引き継ぐための Notion 上の仕組みを、部品と流れで説明します。</p>
+  <p class="meta">出典：個人AI運用基盤｜設計仕様書（設計基準日 2026-09-21／2026-09-23 取得時点の内容）</p>
+</header>
+
+<div class="summary">
+  <h2>ひとことで言うと</h2>
+  <p class="lead">記憶を「判断・学び・出来事・原文」の4種類に分けて置き場所を決め、AIが読む・書く・点検する手順を固定した仕組みです。</p>
+  <ul>
+    <li><b>置き場所を役割で分けた。</b>判断は第二の脳、学びは個人ナレッジ庫、出来事は作業ログ、会話の原文はセッションバックアップに入れる。混ぜると検索結果に不要なものが混ざり、判断に使えなくなるためです。</li>
+    <li><b>出来事は必ず残し、判断は本人の承認後だけ残す。</b>作業ログは「迷ったら書く」、第二の脳は「迷ったら入れない」。2つのルールは向きが逆です。</li>
+    <li><b>正しく動いているかを機械が毎晩点検する。</b>自動監査が毎日結果を1行残し、異常があったときだけ本人に知らせます。</li>
+  </ul>
+  <p class="ask"><b>読み方：</b>まず「機能ブロック図」で部品を押して役割を確認し、次に「動く図解」で使う場面ごとの流れを再生してください。</p>
+</div>
+
+<section>
+  <h2>何のための仕組みか</h2>
+  <p>AIは会話が変わると前回の文脈を忘れます。使うAIが変わればなおさらです。この基盤は、AIを使うたびに次の5つが良くなることを目的にしています。</p>
+  <div class="tw"><table>
+    <caption>目的（設計仕様書の冒頭）と、効いてくる部品</caption>
+    <thead><tr><th>良くしたいこと</th><th>意味</th><th>主に効く部品</th></tr></thead>
+    <tbody>
+      <tr><th>再開の正確さ</th><td>別の日・別のAIでも、前回の決定と残りの作業から正しく続けられる</td><td>作業ログ</td></tr>
+      <tr><th>成果物の品質</th><td>本人の判断基準に沿った出力が最初から出る</td><td>第二の脳</td></tr>
+      <tr><th>確認の手間の低減</th><td>AIの出力を見直す時間が減る</td><td>第二の脳・自動監査</td></tr>
+      <tr><th>同じミスの減少</th><td>同じ型の手直しを3回繰り返さない</td><td>作業ログの「修正点」欄</td></tr>
+      <tr><th>本人の説明・応用力</th><td>学んだことを自分の言葉で説明し、別の場面で使える</td><td>個人ナレッジ庫</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>どんな部品でできているか（機能ブロック図）</h2>
+  <p>部品は5つの層に分かれます。上ほど「決める側」、下ほど「記録・点検する側」です。<b>四角を押すと</b>、その部品が何のためにあるかが下に出ます。</p>
+  <div class="ctl" role="group" aria-label="図の表示">
+    <button type="button" data-mode="block" aria-pressed="true">部品を見る</button>
+    <button type="button" data-mode="flow" aria-pressed="false">流れを見る</button>
+  </div>
+  <div class="ctl" id="scnCtl" role="group" aria-label="場面を選ぶ" hidden></div>
+  <figure>
+    <div class="frame">
+      <svg id="map" viewBox="0 0 420 782" role="img" aria-label="個人AI運用基盤の機能ブロック図。決める層、動く層、覚える層、証拠を残し育てる層、自動で回し見張る層の5層に15の部品がある" style="width:100%;max-width:540px">
+        <style>
+          #map .band{fill:var(--bg);stroke:var(--line)}
+          #map .bandl{font-size:12px;fill:var(--ink2);font-weight:700}
+          #map .nd rect{fill:var(--bg);stroke:var(--ink2);stroke-width:1;transition:fill .25s,stroke .25s}
+          #map .nd text{font-size:12.5px;fill:var(--ink);pointer-events:none}
+          #map .nd .sub{font-size:10px;fill:var(--ink2)}
+          #map .nd{cursor:pointer}
+          #map .nd:hover rect,#map .nd:focus rect{stroke:var(--accent);stroke-width:2}
+          #map .nd.sel rect{stroke:var(--accent);stroke-width:2.5}
+          #map .nd.on rect{fill:var(--accent-bg);stroke:var(--accent);stroke-width:2.5}
+          #map .nd.dim{opacity:.35}
+          #map .ed{fill:none;stroke:var(--accent);stroke-width:2}
+          #map .ed.old{stroke:var(--accent-line);stroke-width:1.5}
+          #map #tok{fill:var(--accent)}
+          #map .lbl{font-size:11px;fill:var(--accent);font-weight:700}
+        </style>
+        <g id="bands"></g>
+        <g id="edges"></g>
+        <g id="nodes"></g>
+        <circle id="tok" r="7" cx="-20" cy="-20"/>
+      </svg>
+    </div>
+    <figcaption id="cap">5層・15部品。線は「流れを見る」で場面ごとに表示されます。</figcaption>
+    <p class="take" id="take">記憶の置き場（覚える層）と、原文の置き場（証拠の層）を分けているのがこの設計の中心です。</p>
+  </figure>
+
+  <div class="ctl no-print" id="play" hidden>
+    <button type="button" id="bPrev">◀ 前へ</button>
+    <button type="button" id="bPlay" aria-pressed="false">▶ 再生</button>
+    <button type="button" id="bNext">次へ ▶</button>
+  </div>
+  <ol id="steps" hidden></ol>
+
+  <div class="note" id="detail" aria-live="polite">
+    <h2 id="dT">部品を押してください</h2>
+    <div id="dB">図の四角を押すと「役割」「入れるもの・入れないもの」「なぜあるのか」が表示されます。</div>
+  </div>
+</section>
+
+<section>
+  <h2>3つの記憶はどう使い分けるのか</h2>
+  <p>人の記憶にならって分けています。「意味記憶」は判断や知識、「エピソード記憶」はいつ何をしたかの出来事です。</p>
+  <div class="tw"><table>
+    <caption>覚える層の3つのデータベース</caption>
+    <thead><tr><th></th><th>第二の脳</th><th>個人ナレッジ庫</th><th>作業ログ</th></tr></thead>
+    <tbody>
+      <tr><th>記憶の種類</th><td>判断・原理（意味記憶）</td><td>本人が読み返す知識（意味記憶）</td><td>出来事（エピソード記憶）</td></tr>
+      <tr><th>大事なこと</th><td>選び抜く</td><td>選び抜く</td><td>漏らさない</td></tr>
+      <tr><th>入れるかの試験</th><td>AIが自力では知り得ない情報か</td><td>来週、自分の言葉で説明できるか（できないなら入れる）</td><td>作業・決定・検証・持ち越し・中断・棄却があったか</td></tr>
+      <tr><th>迷ったら</th><td>入れない</td><td>入れない</td><td>書く</td></tr>
+      <tr><th>誰が読むか</th><td>判断のときにAIが読む</td><td>本人が読み返す</td><td>再開時・週次にAIと本人が読む</td></tr>
+      <tr><th>誰が書くか</th><td>本人の承認後にAI</td><td>本人の承認後にAI</td><td>AIが会話の区切りで必ず書く</td></tr>
+    </tbody>
+  </table></div>
+  <p>身近な例で言えば、第二の脳は「部長としての判断のクセを書いたメモ」、個人ナレッジ庫は「自分用の勉強ノート」、作業ログは「業務日報」です。日報をすべて判断メモに書き写すと、肝心の判断が埋もれて探せなくなります。</p>
+</section>
+
+<section>
+  <h2>判断基準はどう育つのか</h2>
+  <p>会話から見つかった判断基準は、いきなり第二の脳には入りません。証拠を集めながら段階を上がります。</p>
+  <div class="tw"><table>
+    <caption>判断基準候補台帳の状態と確度</caption>
+    <thead><tr><th>段階</th><th>条件</th><th>誰が決めるか</th></tr></thead>
+    <tbody>
+      <tr><th>仮説</th><td>会話の原文から見つかった直後。確度は「低」</td><td>AIが登録</td></tr>
+      <tr><th>有力候補</th><td>別の場面でも同じ判断が見つかる。観測2件で確度「中」、3件以上かつ反証なしで「高」</td><td>確度はAI、状態は本人</td></tr>
+      <tr><th>確定候補</th><td>本人が確定と判断した</td><td>本人</td></tr>
+      <tr><th>第二の脳カード</th><td>確定候補になった時点で、Notionのエージェントが登録事務を行う</td><td>AI（事務のみ）</td></tr>
+    </tbody>
+  </table></div>
+  <p>カードになった後も、実際の相談でカードと結論が食い違えば、その食い違いをカードに1行ずつ書き足します。3行たまったら「適用範囲を狭める・例外を足す・無効にする」のどれかを本人が決めます。こうして基準は使うたびに磨かれます。</p>
+</section>
+
+<section>
+  <h2>何を優先し、何をもって「完了」とするか</h2>
+  <h3>食い違ったときの優先順位</h3>
+  <ol>
+    <li>本人のその場の最新の指示</li>
+    <li>設計仕様書の「現行設計仕様」</li>
+    <li>パーソナル指示・Skill（設計を各AIで実行するための実装物）</li>
+    <li>データベースの項目構造</li>
+    <li>作業ログ・セッションバックアップ（過去に起きたことの証拠であり、仕様ではない）</li>
+  </ol>
+  <p>最新の指示と設計書が食い違ったら、作業を止めずに最新の指示で進め、同じ作業の中で設計書を直します。</p>
+  <h3>「完了」を5段階に分ける</h3>
+  <div class="tw"><table>
+    <caption>「実装済み」を1語で済ませないための定義</caption>
+    <thead><tr><th>段階</th><th>完了条件</th></tr></thead>
+    <tbody>
+      <tr><th>設計済み</th><td>設計書に現行仕様が書かれている</td></tr>
+      <tr><th>保存済み</th><td>指示・Skill・DB変更が対象のAI環境へ保存されている</td></tr>
+      <tr><th>読込確認済み</th><td>新しい会話でその設定が読み込まれることを確かめた</td></tr>
+      <tr><th>動作確認済み</th><td>検索・候補提示・記録・再開が実例で動いた</td></tr>
+      <tr><th>効果確認済み</th><td>確認の手間・手戻り・同じミス・再開時間が実際に改善した</td></tr>
+    </tbody>
+  </table></div>
+  <p>あるAIで動いたことを、別のAIでも動いたとは見なしません。環境ごとに別々に確かめます。</p>
+</section>
+
+<section>
+  <h2>それぞれ「何ではないか」</h2>
+  <div class="tw"><table>
+    <caption>設計上の境界（混同を防ぐための線引き）</caption>
+    <thead><tr><th>部品</th><th>これである</th><th>これではない</th></tr></thead>
+    <tbody>
+      <tr><th>第二の脳</th><td>個人の判断の記憶</td><td>組織の正式仕様、プロジェクト台帳</td></tr>
+      <tr><th>個人ナレッジ庫</th><td>学習資産</td><td>本人の最終判断の保存場所</td></tr>
+      <tr><th>作業ログ</th><td>出来事の記憶</td><td>会話全文のバックアップ</td></tr>
+      <tr><th>セッションバックアップ</th><td>原文の証拠</td><td>そのまま判断に使える整理済みの知識</td></tr>
+      <tr><th>パーソナル指示／Skill</th><td>いつもの振る舞い／繰り返す手順</td><td>同じ内容の二重管理</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>価値が出ているかをどう見るか</h2>
+  <p>設計書は、整えること自体が目的になる危険を自覚しています。価値が出ているかは次で判断します。</p>
+  <div class="tw"><table>
+    <caption>観測する兆候</caption>
+    <thead><tr><th>区分</th><th>兆候</th></tr></thead>
+    <tbody>
+      <tr><th><span class="badge ok">◎ 出ている</span></th><td>同じ型の手直しを3回繰り返さない（週次で型ごとの再発件数を数える）</td></tr>
+      <tr><th><span class="badge ok">◎ 出ている</span></th><td>「なぜその判断か」をカード1枚で説明できる</td></tr>
+      <tr><th><span class="badge ok">◎ 出ている</span></th><td>AIへの依頼に添える根拠・検証の部品が、会話のたびに良くなる</td></tr>
+      <tr><th><span class="badge ng">× 出ていない</span></th><td>記録や参照の数値は高いのに、成果物の出荷が4週増えない</td></tr>
+      <tr><th><span class="badge ng">× 出ていない</span></th><td>基準の整備が目的化し、本業の成果が動かない</td></tr>
+      <tr><th><span class="badge ng">× 出ていない</span></th><td>まとめて登録したカードが、実際の相談で一度も使われないまま残る</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>今どこまで動いているか</h2>
+  <div class="tw"><table>
+    <caption>設計書の記載に基づく稼働状況（2026-09-23 取得時点）</caption>
+    <thead><tr><th>部品</th><th>状態</th><th>設計書の記載</th></tr></thead>
+    <tbody>
+      <tr><th>第二の脳・個人ナレッジ庫・作業ログ・バックアップ</th><td><span class="badge ok">◎ 稼働</span></td><td>存在と主要な項目を現物で確認済み</td></tr>
+      <tr><th>判断基準アナリスト</th><td><span class="badge ok">◎ 稼働</span></td><td>抽出・審議・昇格登録の3点をテスト済み</td></tr>
+      <tr><th>基盤ヘルスチェッカー</th><td><span class="badge wa">△ 稼働・一部未検証</span></td><td>本稼働。日次の実発火と通知の到達は設計書の現状欄で未検証のまま</td></tr>
+      <tr><th>ChatGPT同期エージェント</th><td><span class="badge wa">△ 稼働・一部未検証</span></td><td>初回10件を移行済み。日次の自動実行は未検証</td></tr>
+      <tr><th>Claude 会話ログバックアップ</th><td><span class="badge wa">△ 読込のみ確認</span></td><td>起動語「会話ログバックアップ」方式。実際の登録動作は未検証</td></tr>
+      <tr><th>層Cカナリア（能動テスト）</th><td><span class="badge ng">× 保留</span></td><td>テスト2回失敗、原因未特定</td></tr>
+      <tr><th>効果（手間・ミスの減少）</th><td><span class="badge na">－ 未測定</span></td><td>週次レビューで人が確認する設計。効果確認済みと明記された項目はない</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<div class="note">
+  <h2>前提・出典</h2>
+  <ul>
+    <li>出典：Notion「個人AI運用基盤｜設計仕様書」の現行設計仕様（1〜11章）。変更履歴は見出しと直近の一部のみ参照しました。</li>
+    <li>他の人への説明用に、NotionのURL・エージェントの設定URL・カード番号は載せていません。</li>
+    <li>稼働状況は設計書の記載であり、この資料の作成時に各部品の動作を改めて確かめてはいません。</li>
+    <li>図の部品名は分かりやすさのため一部まとめています（例：パーソナル指示とSkillを1つの四角に、監査結果DBはヘルスチェッカーの説明に含めた）。</li>
+  </ul>
+</div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+var NS="http://www.w3.org/2000/svg";
+/* ===== データ正本：部品・層・場面はここだけで定義する ===== */
+var BANDS=[
+  {y:8,  label:"① 決める層"},
+  {y:163,label:"② 動く層（AI）"},
+  {y:318,label:"③ 覚える層（記憶）"},
+  {y:473,label:"④ 証拠を残し、育てる層"},
+  {y:628,label:"⑤ 自動で回し、見張る層"}
+];
+var COLX=[76,210,344];
+var N={
+ me:{r:0,c:0,t:"本人の指示",s:"最優先",
+   role:"本人がその場で出す最新の指示。すべての判断で最優先される。",
+   inn:"その場の依頼・判断・承認",out:"—",
+   why:"設計書と食い違っても作業を止めず、最新の指示で進めて同じ作業内で設計書を直すため。判断基準の採用や状態の変更など、最終判断は常に本人に残す。"},
+ spec:{r:0,c:1,t:"設計仕様書",s:"全体の正本",
+   role:"基盤全体の「今有効な仕様」を1ページにまとめた正本。",
+   inn:"各部品の責務、データの形、流れ、AI環境の違い、変更の管理",out:"日々の作業記録、会話の全文",
+   why:"別のAIが過去ログを全部読まなくても、このページだけで運用を再現できるようにするため。経緯や失敗談は下部の変更履歴に分け、上部には現行仕様だけを書く。"},
+ inst:{r:0,c:2,t:"指示・Skill",s:"実行するための実装物",
+   role:"パーソナル指示＝AIのいつもの振る舞い。Skill（notion-vault 等）＝検索・登録・更新・検証の繰り返し手順。",
+   inn:"回答の原則、任せ方、記憶の使い方／DBの検索・登録手順",out:"本人固有の案件内容そのもの",
+   why:"設計書を各AI環境で実際に動かすための部品。同じ規則を指示・Skill・設計書に全文で三重に書くと食い違うため、「何を決める文書か」で役割を分ける。"},
+ gpt:{r:1,c:0,t:"ChatGPT",s:"Web・iPhone・Codex",
+   role:"Web／iPhone は日常の相談・判断・記録。Codex は実装や複雑な作業。",
+   inn:"—",out:"—",
+   why:"得意な場面でAIを使い分けても、同じNotionを共通の記憶として読み書きすることで文脈が切れないようにする。"},
+ cla:{r:1,c:1,t:"Claude",s:"App・Cowork・Code",
+   role:"App は通常会話とモバイル。Cowork／Code は長時間の作業や実装。",
+   inn:"—",out:"—",
+   why:"同じ仕様を複数環境に反映するが、保存・読込・動作・効果は環境ごとに別に確かめる。一方で動いたことを他方の成功とは見なさない。"},
+ nai:{r:1,c:2,t:"Notion AI",s:"個人用＋自動エージェント",
+   role:"パーソナルエージェントは日常の相談。カスタムエージェントは決まった時刻やきっかけで動く自動処理を担う。",
+   inn:"—",out:"—",
+   why:"Notionの中で直接DBを編集できるため、定期的な抽出・点検・移行を人の操作なしで回せる。権限は各エージェントに必要な最小限だけ与える。"},
+ sb:{r:2,c:0,t:"第二の脳",s:"判断の記憶",
+   role:"本人固有の判断を再利用するためのカード集。",
+   inn:"判断基準、優先順位、しきい値、例外、止める条件、選んだ理由・却下した理由、確認済みの案件状態",out:"一般知識、会話の全文、指示やSkillに既に書いてある基準",
+   why:"一般のAIでは再現できない「この人ならこう判断する」を残すため。入れる試験は「AIが自力で知り得ない情報か」。確定（Confirmed）のカードだけを判断に使い、カードには結論ではなく「どんな状況で引くか（発火条件）」を書いて検索しやすくする。"},
+ pk:{r:2,c:1,t:"個人ナレッジ庫",s:"学びの記憶",
+   role:"本人が新しく理解したこと、誤解を直したことを、後で自分の言葉で説明できるように貯める。",
+   inn:"仕事に再利用でき、自分の言葉で説明・応用したい知識（経緯・気づき・実務への使い方まで）",out:"本人固有の判断基準（第二の脳へ）、単なるログ",
+   why:"学びを積み上げて本人の力にするため。入れる試験は「来週、自分の言葉で説明できるか。できないなら入れる」。要点欄には答えではなく問いだけを書き、先に自分で答えてから読む。読み返した日と回数を記録する。"},
+ wl:{r:2,c:2,t:"作業ログ",s:"出来事の記憶",
+   role:"実際に行った作業・決定・検証・持ち越し・中断・棄却を1会話1行で記録する。",
+   inn:"何をどこまでやったか、成果物、次の行動と期限、使ったスキル、修正点、却下した案と理由",out:"考え途中のメモ、雑談、まだ何も動いていない相談",
+   why:"別の日・別のAIでも正しく再開するため。「迷ったら書く」。修正点の欄が失敗の記録を兼ね、同じ型が3件たまったら仕組みへの組み込みを提案する。"},
+ rcv:{r:3,c:0,t:"ChatGPT受信DB",s:"受け取りの一次置き場",
+   role:"ChatGPTの拡張機能が直接書き込める受信用のDB。",
+   inn:"ChatGPTの会話の受信レコード",out:"正本としての扱い（正本はセッションバックアップ）",
+   why:"ChatGPTからは正本のバックアップDBへ直接書けないため、いったんここで受けてから自動で移す2段構えにした。"},
+ bk:{r:3,c:1,t:"セッションバックアップ",s:"会話の原文",
+   role:"ChatGPT・Claude・Notion AIの会話全文を1つのDBに保存する。出所と会話IDで区別する。",
+   inn:"会話の全文とその属性（日付・出所・文字数・同期日時など）",out:"要約で原文を置き換えること",
+   why:"後から判断基準を掘り出したり、監査・復元したりするための一次証拠。判断に直接使う整理済みの知識ではない。"},
+ jc:{r:3,c:2,t:"判断基準候補台帳",s:"第二の脳の手前",
+   role:"会話の原文から見つかった判断基準の候補を、証拠付きで育てる場所。",
+   inn:"候補、証拠ログ、反証ログ、観測した場面の数、確度、状態",out:"確定した判断（確定したら第二の脳へ）",
+   why:"一度の発言だけで判断基準と決めつけないため。仮説→有力候補→確定候補と段階を踏み、確度は観測数で機械的に更新し、状態の変更は本人だけが行う。"},
+ sync:{r:4,c:0,t:"同期エージェント",s:"毎日 3:00",
+   role:"ChatGPT受信DBの未同期の行を、セッションバックアップへ移す。",
+   inn:"—",out:"—",
+   why:"人が転記しなくても、ChatGPTの会話が正本に揃うようにするため。新規は作成、既存は差分を追記、長すぎる本文は分割。元の行は消さずに「Backed up」にして区別する。"},
+ ana:{r:4,c:1,t:"判断基準アナリスト",s:"毎週日曜 9:00",
+   role:"会話の原文から判断基準の候補を抽出して台帳へ入れ、審議レポートを出す。確定候補になったら第二の脳への登録事務を行う。",
+   inn:"—",out:"—",
+   why:"本人の実際の選択・却下・撤回・修正は、本人の自己申告より強い証拠になる。それを人手をかけずに掘り出すため。見落としより、誤って拾うことを避けるのを優先する。"},
+ hc:{r:4,c:2,t:"基盤ヘルスチェッカー",s:"毎日 2:00",
+   role:"5つのDBが設計どおりに書かれているか、AIの回答が決まりを守っているか、設計書の改訂に点検手順が追いついているかを毎晩点検する。",
+   inn:"結果を毎回1行、監査結果DBに記録（正常時も）",out:"DBの修正（点検対象は読み取り専用）",
+   why:"自動化が黙って止まる失敗を見つけるため。正常でも毎日記録を残すので、記録が無いこと自体が「監視役が止まった」合図になる。通知は異常のときだけ。効果の確認は人が週次で行う。"}
+};
+var S=[
+ {k:"consult",n:"相談して判断する",take:"AIは先に自分で考え、あとから本人の基準と照らし合わせる。食い違いは消さずにカードへ書き足す。",st:[
+  {e:[["me","cla"]],x:"本人が相談する（例：この進め方でよいか）。"},
+  {h:["cla"],x:"AIはまず、会話の情報と一般知識だけで自分の見立てを作る。先にカードの結論を読むと引きずられるため。"},
+  {e:[["cla","sb"]],x:"状況を表す2〜4語で第二の脳を検索する。結論の形では探さない。"},
+  {e:[["sb","cla"]],x:"見立てとカードを比べ、一致・補強・相違・射程外に分ける。回答の結論の直後に「照合：」の1行を置く。"},
+  {e:[["cla","sb",26]],x:"相違があれば、同じターンでカードの「反証・限定の記録」に1行書き足す。カードの結論はAIが変えない。"},
+  {e:[["cla","jc"]],x:"元になった候補が台帳にあれば、その反証ログにも同じ1行を書く。"},
+  {e:[["sb","me",-124]],x:"書き足しが3行たまったら「適用範囲を狭める／例外を足す／無効にする」のどれかを本人が決める。"}]},
+ {k:"end",n:"会話を終える",take:"出来事は必ず残し、判断と学びは本人が承認したものだけを残す。",st:[
+  {e:[["cla","wl"]],x:"区切り（成果物を渡した・判断が確定した・次の行動が決まった）で、作業ログに1行を必ず書く。使ったスキルと修正点も省略しない。"},
+  {e:[["cla","me"]],x:"回答の末尾に「記憶候補」を出す。第二の脳と個人ナレッジ庫は別々に判定し、無ければ「なし」と書く。"},
+  {e:[["me","cla",40]],x:"本人が採用か却下かを決める。承認がない限り、判断や知識は保存しない。"},
+  {e:[["cla","sb"]],x:"承認された判断は第二の脳へ。既に似たカードがあれば新しく作らず更新・統合する。"},
+  {e:[["cla","pk"]],x:"承認された学びは個人ナレッジ庫へ。要点欄には答えではなく「問い」だけを書く。"},
+  {h:["cla","wl","sb","pk"],x:"書いた後に読み直して確かめるまで「登録しました」と言わない。"}]},
+ {k:"resume",n:"前回の続きから再開する",take:"会話の始めに全部を読むのではなく、再開の合図があった案件だけを読む。",st:[
+  {e:[["me","cla"]],x:"本人が「続けて」と言う。会話の始めに継続中の一覧をすべて読むことはしない（一覧の見直しは週1回にまとめる）。"},
+  {e:[["cla","wl"]],x:"同じ案件キーの行と、最新の完了・撤回の記録を読む。"},
+  {e:[["wl","cla",30]],x:"前回の決定・検証済みと未検証・残りの作業・再開地点を組み立て直す。"},
+  {e:[["cla","me",40]],x:"前回の決定を先に示してから答える。関係のない案件は開かない。"}]},
+ {k:"grow",n:"会話が判断基準に育つまで",take:"AIが見つけて育て、本人が確定し、登録の事務はAIが行う。決める部分だけを人に残している。",st:[
+  {e:[["gpt","rcv",-124]],x:"ChatGPTの会話は拡張機能でまず受信DBに入る（ChatGPTから正本へは直接書けないため）。"},
+  {e:[["rcv","sync"]],x:"毎日3:00、同期エージェントが未同期の行を拾う。"},
+  {e:[["sync","bk"]],x:"セッションバックアップへ移す。新規は作成、既存は差分を追記。元の行は消さずに「Backed up」にする。"},
+  {e:[["cla","bk",-70],["nai","bk",0]],x:"ClaudeとNotion AIの会話も、同じバックアップDBに全文で保存される。"},
+  {e:[["bk","ana"]],x:"毎週日曜9:00、判断基準アナリストが原文を読み、本人の選択・却下・撤回・修正から判断基準の候補を探す。"},
+  {e:[["ana","jc"]],x:"候補を台帳に「仮説・確度 低」で登録する。同じ候補が既にあれば証拠を追記し、観測した場面の数を増やす。"},
+  {e:[["me","jc",-40]],x:"本人が台帳を見て、状態を「確定候補」に変える。ここだけは必ず人が決める。"},
+  {e:[["jc","ana",30],["ana","sb",-60]],x:"確定候補への変更を合図に、アナリストが第二の脳へカードを登録する（番号の採番などの事務だけ）。"}]},
+ {k:"night",n:"毎晩の自動点検",take:"正常でも毎日記録を残すので、「記録が無い」こと自体が異常の合図になる。",st:[
+  {h:["hc"],x:"毎日2:00、基盤ヘルスチェッカーが起動する。"},
+  {e:[["hc","wl",124],["hc","sb",60],["hc","pk",20],["hc","bk"],["hc","jc"]],x:"5つのDBの前日分を読み取り専用で点検する（必須項目の記入、確度の規則、保存状態など）。"},
+  {e:[["hc","bk",-30]],x:"会話の原文も読み、回答に照合行や記憶候補欄があるか、本文が途中で切れていないかを調べる。"},
+  {e:[["hc","spec",0]],x:"設計書が改訂されていたら、点検の手順書がそれに追いついているかを確かめる（ドリフト検知）。"},
+  {h:["hc"],x:"結果を毎回1行、監査結果DBに残す。正常でも残す。"},
+  {e:[["hc","me",0]],x:"異常のときだけ本人に通知する。効果の確認は週次に人が行う。"}]},
+ {k:"change",n:"仕様を変える",take:"設計書を先に直し、各AIは「設計書同期」の一言で自分の環境を追いつかせる。",st:[
+  {e:[["me","spec"]],x:"本人が変更を決め、同じ作業の中で設計書の現行仕様と変更履歴を直す。"},
+  {h:["spec"],x:"環境別適用状況の表に1行足す。変更した環境は「済」か「保存待ち」、他の環境は「未」。"},
+  {e:[["spec","inst"]],x:"各AIの実装物（パーソナル指示・Skill・エージェントの指示書）に差分だけを反映する。"},
+  {e:[["inst","gpt"],["inst","cla"],["inst","nai"]],x:"各AIは「設計書同期」の一言で、表の自分の列にある「未」を古い順に処理する。"},
+  {h:["gpt","cla","nai"],x:"保存→読込→動作→効果を環境ごとに別々に確かめる。本人の「保存した」という申告だけでは「済」にしない。"}]}
+];
+/* ===== 描画 ===== */
+var $=function(id){return document.getElementById(id)};
+var svg=$("map"),gB=$("bands"),gE=$("edges"),gN=$("nodes"),tok=$("tok");
+function el(t,a,p){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+var W=118,H=54;
+function cx(id){return COLX[N[id].c]}
+function cy(id){return BANDS[N[id].r].y+84}
+BANDS.forEach(function(b){
+  el("rect",{x:4,y:b.y,width:412,height:148,rx:6,"class":"band"},gB);
+  var t=el("text",{x:12,y:b.y+18,"class":"bandl"},gB);t.textContent=b.label;
+});
+var nodeEl={};
+Object.keys(N).forEach(function(id){
+  var d=N[id],g=el("g",{"class":"nd",tabindex:"0",role:"button","aria-label":d.t+"（"+d.s+"）の説明を表示"},gN);
+  el("rect",{x:cx(id)-W/2,y:cy(id)-H/2,width:W,height:H,rx:5},g);
+  var t=el("text",{x:cx(id),y:cy(id)-3,"text-anchor":"middle","font-weight":"700"},g);t.textContent=d.t;t.style.fontSize=Math.min(12.5,110/d.t.length)+"px";
+  var s=el("text",{x:cx(id),y:cy(id)+15,"text-anchor":"middle","class":"sub"},g);s.textContent=d.s;
+  g.addEventListener("click",function(){show(id)});
+  g.addEventListener("keydown",function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();show(id)}});
+  nodeEl[id]=g;
+});
+function pathD(a,b,bend){
+  var ax=cx(a),ay=cy(a),bx=cx(b),by=cy(b),p1,p2;
+  if(N[a].r===N[b].r){var dir=bx>ax?1:-1;p1=[ax+dir*W/2,ay];p2=[bx-dir*W/2,by];}
+  else{var dn=by>ay?1:-1;p1=[ax,ay+dn*H/2];p2=[bx,by-dn*H/2];}
+  bend=bend||0;
+  var mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2;
+  var q=N[a].r===N[b].r?[mx,my+bend]:[mx+bend,my];
+  return "M"+p1[0]+" "+p1[1]+" Q"+q[0]+" "+q[1]+" "+p2[0]+" "+p2[1];
+}
+function arrow(p){ /* 終点に小さな矢印 */
+  var L=p.getTotalLength(),e=p.getPointAtLength(L),s=p.getPointAtLength(Math.max(0,L-10));
+  var ang=Math.atan2(e.y-s.y,e.x-s.x),a1=ang+2.6,a2=ang-2.6;
+  return el("path",{d:"M"+e.x+" "+e.y+" L"+(e.x+9*Math.cos(a1))+" "+(e.y+9*Math.sin(a1))+" L"+(e.x+9*Math.cos(a2))+" "+(e.y+9*Math.sin(a2))+" Z",fill:"var(--accent)"},gE);
+}
+/* ===== 詳細パネル ===== */
+function show(id){
+  var d=N[id];
+  Object.keys(nodeEl).forEach(function(k){nodeEl[k].classList.toggle("sel",k===id)});
+  $("dT").textContent=d.t+"（"+d.s+"）";
+  var box=$("dB");box.textContent="";
+  [["役割",d.role],["入れるもの",d.inn],["入れないもの",d.out],["なぜあるのか",d.why]].forEach(function(r){
+    if(!r[1]||r[1]==="—")return;
+    var p=document.createElement("p"),b=document.createElement("b");b.textContent=r[0]+"：";p.appendChild(b);p.appendChild(document.createTextNode(r[1]));box.appendChild(p);
+  });
+}
+/* ===== 流れの再生 ===== */
+var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var cur=null,idx=-1,timer=null,raf=null,paths=[];
+var scnCtl=$("scnCtl");
+S.forEach(function(sc,i){
+  var b=document.createElement("button");b.type="button";b.textContent=sc.n;b.setAttribute("aria-pressed","false");
+  b.addEventListener("click",function(){pick(i)});scnCtl.appendChild(b);
+});
+function involved(sc){var o={};sc.st.forEach(function(s){(s.e||[]).forEach(function(e){o[e[0]]=o[e[1]]=1});(s.h||[]).forEach(function(h){o[h]=1})});return o}
+function pick(i){
+  stop();cur=S[i];idx=-1;
+  [].forEach.call(scnCtl.children,function(b,j){b.setAttribute("aria-pressed",j===i?"true":"false")});
+  var inv=involved(cur);
+  Object.keys(nodeEl).forEach(function(k){nodeEl[k].classList.toggle("dim",!inv[k]);nodeEl[k].classList.remove("on")});
+  gE.textContent="";paths=[];
+  var ol=$("steps");ol.textContent="";
+  cur.st.forEach(function(s,j){
+    var li=document.createElement("li");li.textContent=s.x;li.tabIndex=0;li.style.cursor="pointer";li.style.margin="4px 0";
+    li.addEventListener("click",function(){stop();go(j)});
+    li.addEventListener("keydown",function(ev){if(ev.key==="Enter"){stop();go(j)}});
+    ol.appendChild(li);
+  });
+  $("cap").textContent="場面：「"+cur.n+"」 全"+cur.st.length+"ステップ";
+  $("take").textContent=cur.take;
+  go(0);
+}
+function go(j){
+  if(!cur)return;j=Math.max(0,Math.min(cur.st.length-1,j));
+  /* 指定ステップまでの線を描き直す */
+  gE.textContent="";cancelAnimationFrame(raf);
+  var last=[];
+  for(var i=0;i<=j;i++){(cur.st[i].e||[]).forEach(function(e){
+    var p=el("path",{d:pathD(e[0],e[1],e[2]),"class":"ed"+(i<j?" old":"")},gE);
+    if(i===j){last.push(p);arrow(p)}
+  })}
+  idx=j;var s=cur.st[j],on={};
+  (s.e||[]).forEach(function(e){on[e[0]]=on[e[1]]=1});(s.h||[]).forEach(function(h){on[h]=1});
+  Object.keys(nodeEl).forEach(function(k){nodeEl[k].classList.toggle("on",!!on[k])});
+  [].forEach.call($("steps").children,function(li,k){
+    if(k===j){li.setAttribute("aria-current","step");li.style.fontWeight="700";li.style.color="var(--accent)"}
+    else{li.removeAttribute("aria-current");li.style.fontWeight="";li.style.color=k<j?"var(--ink2)":""}
+  });
+  animate(last,s.h&&!s.e?s.h[0]:null);
+}
+function animate(ps,pulse){
+  if(!ps.length){ /* 自分の中で完結する手順：点を中央で膨らませる */
+    if(!pulse){tok.setAttribute("cx",-20);return}
+    var x=cx(pulse),y=cy(pulse)-H/2-2,t0=performance.now();
+    tok.setAttribute("cx",x);tok.setAttribute("cy",y);
+    if(reduce){tok.setAttribute("r",7);return}
+    (function f(t){var k=((t-t0)%900)/900;tok.setAttribute("r",5+4*Math.sin(k*Math.PI));if(t-t0<1800)raf=requestAnimationFrame(f);else tok.setAttribute("r",7)})(t0);
+    return;
+  }
+  tok.setAttribute("r",7);
+  var i=0;
+  function one(){
+    var p=ps[i],L=p.getTotalLength(),t0=performance.now(),D=reduce?0:1100/Math.max(1,ps.length*0.6);
+    (function f(t){
+      var k=D?Math.min(1,(t-t0)/D):1,e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2,pt=p.getPointAtLength(L*e);
+      tok.setAttribute("cx",pt.x);tok.setAttribute("cy",pt.y);
+      if(k<1)raf=requestAnimationFrame(f);else if(++i<ps.length)one();
+    })(t0);
+  }
+  one();
+}
+function stop(){clearInterval(timer);timer=null;$("bPlay").setAttribute("aria-pressed","false");$("bPlay").textContent="▶ 再生"}
+$("bPrev").addEventListener("click",function(){stop();go(idx-1)});
+$("bNext").addEventListener("click",function(){stop();go(idx+1)});
+$("bPlay").addEventListener("click",function(){
+  if(timer){stop();return}
+  if(!cur)pick(0);
+  if(idx>=cur.st.length-1)go(0);
+  this.setAttribute("aria-pressed","true");this.textContent="❚❚ 停止";
+  timer=setInterval(function(){if(idx>=cur.st.length-1){stop();return}go(idx+1)},2800);
+});
+/* ===== 表示モード切替 ===== */
+[].forEach.call(document.querySelectorAll("[data-mode]"),function(b){
+  b.addEventListener("click",function(){
+    var flow=b.getAttribute("data-mode")==="flow";
+    [].forEach.call(document.querySelectorAll("[data-mode]"),function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});
+    scnCtl.hidden=!flow;$("play").hidden=!flow;$("steps").hidden=!flow;
+    if(flow){pick(cur?S.indexOf(cur):0)}
+    else{stop();cur=null;idx=-1;gE.textContent="";tok.setAttribute("cx",-20);
+      Object.keys(nodeEl).forEach(function(k){nodeEl[k].classList.remove("dim","on")});
+      $("cap").textContent="5層・15部品。線は「流れを見る」で場面ごとに表示されます。";
+      $("take").textContent="記憶の置き場（覚える層）と、原文の置き場（証拠の層）を分けているのがこの設計の中心です。";}
+  });
+});
+show("sb");
+})();
+</script>
+</body></html>
